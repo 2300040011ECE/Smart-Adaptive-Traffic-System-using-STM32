@@ -1,0 +1,99 @@
+#include "main.h"
+
+#define MIN_GREEN 5000
+#define MAX_GREEN 20000
+#define YELLOW_TIME 2000
+
+uint8_t currentLane = 0;
+
+uint16_t readLane(uint16_t GPIO_Pin, GPIO_TypeDef *GPIOx)
+{
+    return HAL_GPIO_ReadPin(GPIOx, GPIO_Pin);
+}
+
+void setAllRed()
+{
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|GPIO_PIN_3|GPIO_PIN_6, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+}
+
+void setLaneGreen(uint8_t lane)
+{
+    setAllRed();
+
+    switch(lane)
+    {
+        case 0:
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+            break;
+        case 1:
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+            break;
+        case 2:
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+            break;
+        case 3:
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+            break;
+    }
+}
+
+void setLaneYellow(uint8_t lane)
+{
+    switch(lane)
+    {
+        case 0:
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+            break;
+        case 1:
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+            break;
+        case 2:
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+            break;
+        case 3:
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);
+            break;
+    }
+}
+
+int main(void)
+{
+    HAL_Init();
+    SystemClock_Config();
+    MX_GPIO_Init();
+
+    uint8_t laneDensity[4];
+
+    while (1)
+    {
+        laneDensity[0] = readLane(GPIO_PIN_0, GPIOB);
+        laneDensity[1] = readLane(GPIO_PIN_1, GPIOB);
+        laneDensity[2] = readLane(GPIO_PIN_10, GPIOB);
+        laneDensity[3] = readLane(GPIO_PIN_11, GPIOB);
+
+        uint8_t maxLane = 0;
+
+        for(int i=1; i<4; i++)
+        {
+            if(laneDensity[i] > laneDensity[maxLane])
+                maxLane = i;
+        }
+
+        setLaneGreen(maxLane);
+        HAL_Delay(MIN_GREEN);
+
+        setLaneYellow(maxLane);
+        HAL_Delay(YELLOW_TIME);
+
+        currentLane = maxLane;
+    }
+}
